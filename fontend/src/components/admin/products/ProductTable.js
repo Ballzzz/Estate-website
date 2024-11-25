@@ -124,6 +124,7 @@ const AllProduct = (props) => {
 };
 
 /* Single Product Component */
+/* Single Product Component */
 const ProductTable = ({ product, deleteProduct, editProduct }) => {
   return (
     <Fragment>
@@ -155,7 +156,7 @@ const ProductTable = ({ product, deleteProduct, editProduct }) => {
           )}
         </td>
         <td className="p-2 text-center">{product.pQuantity}</td>
-        <td className="p-2 text-center">{product.pCategory.cName}</td>
+        <td className="p-2 text-center">{product.pCategory?.cName||"N/A"}</td>
         <td className="p-2 text-center">{product.pOffer}</td>
         <td className="p-2 text-center">
           {moment(product.createdAt).format("lll")}
