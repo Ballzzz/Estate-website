@@ -1,93 +1,84 @@
-import React, { Fragment, useContext, useState, useEffect } from "react";
-import { ProductContext } from "./index";
-import { editProduct, getAllProduct } from "./FetchApi";
-import { getAllCategory } from "../categories/FetchApi";
-const apiURL = process.env.REACT_APP_API_URL;
+import React, { Fragment, useContext, useState } from "react";
+import { CategoryContext } from "./index";
+import { createCategory, getAllCategory } from "./FetchApi";
 
-const EditProductModal = () => {
-  const { data, dispatch } = useContext(ProductContext);
+const AddCategoryModal = (props) => {
+  const { data, dispatch } = useContext(CategoryContext);
 
-  const [categories, setCategories] = useState([]);
-  const [editformData, setEditformdata] = useState({
-    pId: "",
-    pName: "",
-    pDescription: "",
-    pImages: null,
-    pEditImages: null,
-    pStatus: "",
-    pCategory: "",
-    pQuantity: "",
-    pPrice: "",
-    pOffer: "",
-    error: false,
-    success: false,
-  });
-
-  // Alert helper
   const alert = (msg, type) => (
     <div className={`bg-${type}-200 py-2 px-4 w-full`}>{msg}</div>
   );
 
-  // Fetch categories when the component mounts
-  useEffect(() => {
-    const fetchCategoryData = async () => {
-      const responseData = await getAllCategory();
-      if (responseData && responseData.Categories) {
-        setCategories(responseData.Categories);
-      }
-    };
-    fetchCategoryData();
-  }, []);
+  const [fData, setFdata] = useState({
+    cName: "",
+    cDescription: "",
+    cImage: "",
+    cStatus: "Active",
+    success: false,
+    error: false,
+  });
 
-  // Update the form data when editProductModal data changes
-  useEffect(() => {
-    if (data.editProductModal) {
-      const modalData = data.editProductModal;
-      setEditformdata({
-        pId: modalData.pId || "",
-        pName: modalData.pName || "",
-        pDescription: modalData.pDescription || "",
-        pImages: modalData.pImages || null,
-        pEditImages: null, // Reset for new uploads
-        pStatus: modalData.pStatus || "",
-        pCategory: modalData.pCategory || "",
-        pQuantity: modalData.pQuantity || "",
-        pPrice: modalData.pPrice || "",
-        pOffer: modalData.pOffer || "",
-        error: false,
-        success: false,
-      });
-    }
-  }, [data.editProductModal]);
-
-  // Fetch all products after successful edit
   const fetchData = async () => {
-    const responseData = await getAllProduct();
-    if (responseData && responseData.Products) {
+    let responseData = await getAllCategory();
+    if (responseData.Categories) {
       dispatch({
-        type: "fetchProductsAndChangeState",
-        payload: responseData.Products,
+        type: "fetchCategoryAndChangeState",
+        payload: responseData.Categories,
       });
     }
   };
 
-  // Handle form submission
+  if (fData.error || fData.success) {
+    setTimeout(() => {
+      setFdata({ ...fData, success: false, error: false });
+    }, 2000);
+  }
+
   const submitForm = async (e) => {
+    dispatch({ type: "loading", payload: true });
+    // Reset and prevent the form
     e.preventDefault();
+    e.target.reset();
+
+    if (!fData.cImage) {
+      dispatch({ type: "loading", payload: false });
+      return setFdata({ ...fData, error: "Please upload a category image" });
+    }
+
     try {
-      const responseData = await editProduct(editformData);
+      let responseData = await createCategory(fData);
       if (responseData.success) {
         fetchData();
-        setEditformdata({ ...editformData, success: true });
+        setFdata({
+          ...fData,
+          cName: "",
+          cDescription: "",
+          cImage: "",
+          cStatus: "Active",
+          success: responseData.success,
+          error: false,
+        });
+        dispatch({ type: "loading", payload: false });
         setTimeout(() => {
-          dispatch({ type: "editProductModalClose", payload: false });
+          setFdata({
+            ...fData,
+            cName: "",
+            cDescription: "",
+            cImage: "",
+            cStatus: "Active",
+            success: false,
+            error: false,
+          });
         }, 2000);
       } else if (responseData.error) {
-        setEditformdata({ ...editformData, error: responseData.error });
+        setFdata({ ...fData, success: false, error: responseData.error });
+        dispatch({ type: "loading", payload: false });
+        setTimeout(() => {
+          return setFdata({ ...fData, error: false, success: false });
+        }, 2000);
       }
     } catch (error) {
-      console.error("Edit Product Error:", error);
-      setEditformdata({ ...editformData, error: "Failed to update product" });
+      console.log(error);
     }
   };
 
@@ -95,102 +86,133 @@ const EditProductModal = () => {
     <Fragment>
       {/* Black Overlay */}
       <div
-        onClick={() => dispatch({ type: "editProductModalClose", payload: false })}
+        onClick={(e) => dispatch({ type: "addCategoryModal", payload: false })}
         className={`${
-          data.editProductModal?.modal ? "" : "hidden"
+          data.addCategoryModal ? "" : "hidden"
         } fixed top-0 left-0 z-30 w-full h-full bg-black opacity-50`}
       />
+      {/* End Black Overlay */}
+
       {/* Modal Start */}
       <div
         className={`${
-          data.editProductModal?.modal ? "" : "hidden"
-        } fixed inset-0 flex items-center z-30 justify-center overflow-auto`}
+          data.addCategoryModal ? "" : "hidden"
+        } fixed inset-0 m-4  flex items-center z-30 justify-center`}
       >
-        <div className="relative bg-white w-11/12 md:w-3/6 shadow-lg flex flex-col items-center space-y-4 px-4 py-4 md:px-8">
+        <div className="relative bg-white w-12/12 md:w-3/6 shadow-lg flex flex-col items-center space-y-4  overflow-y-auto px-4 py-4 md:px-8">
           <div className="flex items-center justify-between w-full pt-4">
             <span className="text-left font-semibold text-2xl tracking-wider">
-              Edit Product
+              Add Category
             </span>
+            {/* Close Modal */}
             <span
-              onClick={() => dispatch({ type: "editProductModalClose", payload: false })}
-              className="cursor-pointer text-gray-100 py-2 px-2 rounded-full bg-gray-800"
+              style={{ background: "#303031" }}
+              onClick={(e) =>
+                dispatch({ type: "addCategoryModal", payload: false })
+              }
+              className="cursor-pointer text-gray-100 py-2 px-2 rounded-full"
             >
               <svg
                 className="w-6 h-6"
                 fill="none"
                 stroke="currentColor"
+                viewBox="0 0 24 24"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </span>
           </div>
-          {editformData.error && alert(editformData.error, "red")}
-          {editformData.success && alert("Product updated successfully!", "green")}
-          <form className="w-full" onSubmit={submitForm}>
-            {/* Form fields */}
-            <div className="flex space-x-1 py-4">
-              <div className="w-1/2">
-                <label>Product Name *</label>
-                <input
-                  type="text"
-                  value={editformData.pName}
-                  onChange={(e) =>
-                    setEditformdata({ ...editformData, pName: e.target.value })
-                  }
-                  className="px-4 py-2 border focus:outline-none w-full"
-                />
-              </div>
-              <div className="w-1/2">
-                <label>Product Price *</label>
-                <input
-                  type="number"
-                  value={editformData.pPrice}
-                  onChange={(e) =>
-                    setEditformdata({ ...editformData, pPrice: e.target.value })
-                  }
-                  className="px-4 py-2 border focus:outline-none w-full"
-                />
-              </div>
-            </div>
-            <div className="flex flex-col">
-              <label>Product Description *</label>
-              <textarea
-                value={editformData.pDescription}
+          {fData.error ? alert(fData.error, "red") : ""}
+          {fData.success ? alert(fData.success, "green") : ""}
+          <form className="w-full" onSubmit={(e) => submitForm(e)}>
+            <div className="flex flex-col space-y-1 w-full py-4">
+              <label htmlFor="name">Category Name</label>
+              <input
                 onChange={(e) =>
-                  setEditformdata({ ...editformData, pDescription: e.target.value })
+                  setFdata({
+                    ...fData,
+                    success: false,
+                    error: false,
+                    cName: e.target.value,
+                  })
                 }
-                className="px-4 py-2 border focus:outline-none w-full"
-                rows="4"
+                value={fData.cName}
+                className="px-4 py-2 border focus:outline-none"
+                type="text"
               />
             </div>
-            {/* Category selector */}
-            <div className="flex flex-col mt-4">
-              <label>Product Category *</label>
-              <select
-                value={editformData.pCategory}
+            <div className="flex flex-col space-y-1 w-full">
+              <label htmlFor="description">Category Description</label>
+              <textarea
                 onChange={(e) =>
-                  setEditformdata({ ...editformData, pCategory: e.target.value })
+                  setFdata({
+                    ...fData,
+                    success: false,
+                    error: false,
+                    cDescription: e.target.value,
+                  })
+                }
+                value={fData.cDescription}
+                className="px-4 py-2 border focus:outline-none"
+                name="description"
+                id="description"
+                cols={5}
+                rows={5}
+              />
+            </div>
+            {/* Image Field & function */}
+            <div className="flex flex-col space-y-1 w-full">
+              <label htmlFor="name">Category Image</label>
+              <input
+                accept=".jpg, .jpeg, .png"
+                onChange={(e) => {
+                  setFdata({
+                    ...fData,
+                    success: false,
+                    error: false,
+                    cImage: e.target.files[0],
+                  });
+                }}
+                className="px-4 py-2 border focus:outline-none"
+                type="file"
+              />
+            </div>
+            <div className="flex flex-col space-y-1 w-full">
+              <label htmlFor="status">Category Status</label>
+              <select
+                name="status"
+                onChange={(e) =>
+                  setFdata({
+                    ...fData,
+                    success: false,
+                    error: false,
+                    cStatus: e.target.value,
+                  })
                 }
                 className="px-4 py-2 border focus:outline-none"
+                id="status"
               >
-                <option value="" disabled>
-                  Select a category
+                <option name="status" value="Active">
+                  Active
                 </option>
-                {categories.map((category) => (
-                  <option key={category._id} value={category._id}>
-                    {category.cName}
-                  </option>
-                ))}
+                <option name="status" value="Disabled">
+                  Disabled
+                </option>
               </select>
             </div>
-            {/* Submit button */}
-            <div className="mt-6">
+            <div className="flex flex-col space-y-1 w-full pb-4 md:pb-6 mt-4">
               <button
+                style={{ background: "#303031" }}
                 type="submit"
-                className="bg-gray-800 text-white px-4 py-2 rounded"
+                className="bg-gray-800 text-gray-100 rounded-full text-lg font-medium py-2"
               >
-                Update Product
+                Create category
               </button>
             </div>
           </form>
@@ -200,4 +222,4 @@ const EditProductModal = () => {
   );
 };
 
-export default EditProductModal;
+export default AddCategoryModal;
