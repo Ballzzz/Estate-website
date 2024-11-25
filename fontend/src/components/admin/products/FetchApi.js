@@ -6,7 +6,8 @@ export const getAllProduct = async () => {
     let res = await axios.get(`${apiURL}/api/product/all-product`);
     return res.data;
   } catch (error) {
-    console.log(error);
+    console.log("Error fetching all products:", error.response?.data || error.message);
+     throw error;
   }
 };
 
